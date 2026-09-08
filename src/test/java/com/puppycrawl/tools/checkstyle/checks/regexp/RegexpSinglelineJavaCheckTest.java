@@ -171,6 +171,17 @@ public class RegexpSinglelineJavaCheckTest extends AbstractModuleTestSupport {
     }
 
     @Test
+    public void testIgnoreCommentsZeroWidthMatch() throws Exception {
+        final String[] expected = {
+            "18: " + getCheckMessage(MSG_REGEXP_EXCEEDED, "(?=MATCH)"),
+            "19: " + getCheckMessage(MSG_REGEXP_EXCEEDED, "(?=MATCH)"),
+            "20: " + getCheckMessage(MSG_REGEXP_EXCEEDED, "(?=MATCH)"),
+        };
+        verifyWithInlineConfigParser(
+                getPath("InputRegexpSinglelineJavaZeroWidth.java"), expected);
+    }
+
+    @Test
     public void test1371588() throws Exception {
         // StackOverflowError with trailing space and ignoreComments
         final String[] expected = CommonUtil.EMPTY_STRING_ARRAY;
