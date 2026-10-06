@@ -769,6 +769,21 @@ public class IndentationCheckTest extends AbstractModuleTestSupport {
     }
 
     @Test
+    public void testAnnotationArrayInitWithSupplementaryCharacters() throws Exception {
+        final DefaultConfiguration checkConfig = createModuleConfig(IndentationCheck.class);
+        checkConfig.addProperty("arrayInitIndent", "0");
+        checkConfig.addProperty("basicOffset", "2");
+        checkConfig.addProperty("lineWrappingIndentation", "0");
+        checkConfig.addProperty("tabWidth", "8");
+        final String[] expected = {
+            "15:13: " + getCheckMessage(MSG_CHILD_ERROR_MULTI,
+                    "annotation array initialization", 12, "0, 11, 13"),
+        };
+        verifyWarns(checkConfig, getPath("InputIndentationAnnotationArraySupplementary.java"),
+                expected);
+    }
+
+    @Test
     public void testAnnotationArrayInitWithEmoji() throws Exception {
         final DefaultConfiguration checkConfig = createModuleConfig(IndentationCheck.class);
 
