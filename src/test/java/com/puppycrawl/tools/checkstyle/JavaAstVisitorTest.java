@@ -254,6 +254,39 @@ public class JavaAstVisitorTest extends AbstractModuleTestSupport {
                     null, null);
         }, "Method should not throw exception.");
     }
+
+    @Test
+    public void testNoStackOverflowOnLongMethodChain() throws Exception {
+        final int callCount = 3000;
+        final String source = "class Test { Object method() { return new StringBuilder()"
+                + ".append(1)".repeat(callCount) + "; } }";
+        final CommonTokenStream tokens = new CommonTokenStream(
+                new JavaLanguageLexer(CharStreams.fromString(source), true));
+        final JavaLanguageParser parser = new JavaLanguageParser(tokens);
+        final JavaLanguageParser.CompilationUnitContext tree = parser.compilationUnit();
+        final DetailAST root = TestUtil.getResultWithLimitedResources(
+                () -> new JavaAstVisitor(tokens).visit(tree));
+        final DetailAST method = root.getFirstChild().findFirstToken(TokenTypes.OBJBLOCK)
+                .findFirstToken(TokenTypes.METHOD_DEF);
+        DetailAST call = method.findFirstToken(TokenTypes.SLIST)
+                .findFirstToken(TokenTypes.LITERAL_RETURN).getFirstChild().getFirstChild();
+        int actualCalls = 0;
+        while (call.getType() == TokenTypes.METHOD_CALL) {
+            final DetailAST dot = call.getFirstChild();
+            assertWithMessage("Method name must be preserved")
+                    .that(dot.getLastChild().getText()).isEqualTo("append");
+            assertWithMessage("Arguments must be preserved")
+                    .that(call.findFirstToken(TokenTypes.ELIST).getFirstChild()
+                            .getFirstChild().getText()).isEqualTo("1");
+            actualCalls++;
+            call = dot.getFirstChild();
+        }
+        assertWithMessage("All chained calls must be present")
+                .that(actualCalls).isEqualTo(callCount);
+        assertWithMessage("The receiver must be preserved")
+                .that(call.getType()).isEqualTo(TokenTypes.LITERAL_NEW);
+    }
+
     /**
      * This test exists to kill surviving mutation from pitest removing expression AST building
      * optimization in {@link JavaAstVisitor#visitBinOp(JavaLanguageParser.BinOpContext)}.

@@ -21,6 +21,7 @@ package com.puppycrawl.tools.checkstyle;
 
 import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Deque;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Optional;
@@ -1698,19 +1699,32 @@ public final class JavaAstVisitor extends JavaLanguageParserBaseVisitor<DetailAs
 
     @Override
     public DetailAstImpl visitMethodCall(JavaLanguageParser.MethodCallContext ctx) {
-        final DetailAstImpl methodCall = create(TokenTypes.METHOD_CALL,
-                (Token) ctx.LPAREN().getPayload());
-        // We always add an 'ELIST' node
-        final DetailAstImpl expressionList = Optional.ofNullable(visit(ctx.expressionList()))
-                .orElseGet(() -> createImaginary(TokenTypes.ELIST));
+        // A fluent receiver chain can be much deeper than the Java thread stack.
+        final Deque<JavaLanguageParser.MethodCallContext> calls = new ArrayDeque<>();
+        JavaLanguageParser.ExprContext receiver = ctx;
+        while (receiver instanceof JavaLanguageParser.MethodCallContext methodCall) {
+            calls.push(methodCall);
+            receiver = methodCall.expr();
+        }
 
-        final DetailAstImpl dot = create(ctx.DOT());
-        dot.addChild(visit(ctx.expr()));
-        dot.addChild(visit(ctx.id()));
-        methodCall.addChild(dot);
-        methodCall.addChild(expressionList);
-        methodCall.addChild(create((Token) ctx.RPAREN().getPayload()));
-        return methodCall;
+        DetailAstImpl result = visit(receiver);
+        while (!calls.isEmpty()) {
+            final JavaLanguageParser.MethodCallContext call = calls.pop();
+            final DetailAstImpl methodCall = create(TokenTypes.METHOD_CALL,
+                    (Token) call.LPAREN().getPayload());
+            // We always add an 'ELIST' node
+            final DetailAstImpl expressionList = Optional.ofNullable(visit(call.expressionList()))
+                    .orElseGet(() -> createImaginary(TokenTypes.ELIST));
+
+            final DetailAstImpl dot = create(call.DOT());
+            dot.addChild(result);
+            dot.addChild(visit(call.id()));
+            methodCall.addChild(dot);
+            methodCall.addChild(expressionList);
+            methodCall.addChild(create((Token) call.RPAREN().getPayload()));
+            result = methodCall;
+        }
+        return result;
     }
 
     @Override
