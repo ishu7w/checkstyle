@@ -21,6 +21,7 @@ package com.puppycrawl.tools.checkstyle.checks.indentation;
 
 import com.puppycrawl.tools.checkstyle.api.DetailAST;
 import com.puppycrawl.tools.checkstyle.api.TokenTypes;
+import com.puppycrawl.tools.checkstyle.utils.CommonUtil;
 
 /**
  * Handler for array initialization blocks.
@@ -110,9 +111,10 @@ public class ArrayInitHandler extends BlockParentHandler {
                     getContext().getLineWrappingIndentation());
 
         final int firstLine = getFirstLine(getListChild());
-        final int lcurlyPos = expandedTabsColumnNo(getLeftCurly());
+        final DetailAST leftCurly = getLeftCurly();
+        final int lcurlyPos = expandedTabsColumnNo(leftCurly);
         final int firstChildPos =
-            getNextFirstNonBlankOnLineAfter(firstLine, lcurlyPos);
+            getNextFirstNonBlankOnLineAfter(firstLine, leftCurly.getColumnNo());
 
         if (firstChildPos != NOT_EXIST) {
             expectedIndent = IndentLevel.addAcceptable(expectedIndent, firstChildPos, lcurlyPos
@@ -122,7 +124,7 @@ public class ArrayInitHandler extends BlockParentHandler {
     }
 
     /**
-     * Returns column number of first non-blank char after
+     * Returns the tab-expanded column of the first non-blank char after
      * specified column on specified line or {@code NOT_EXIST} if such char doesn't exist.
      *
      * @param lineNo   number of line on which we search
@@ -133,7 +135,8 @@ public class ArrayInitHandler extends BlockParentHandler {
      */
     private int getNextFirstNonBlankOnLineAfter(int lineNo, int columnNo) {
         int realColumnNo = columnNo + 1;
-        final int[] line = getContext().getLine(lineNo - 1).codePoints().toArray();
+        final String source = getContext().getLine(lineNo - 1);
+        final int[] line = source.codePoints().toArray();
         final int lineLength = line.length;
         while (realColumnNo < lineLength
                && Character.isWhitespace(line[realColumnNo])) {
@@ -142,6 +145,10 @@ public class ArrayInitHandler extends BlockParentHandler {
 
         if (realColumnNo == lineLength) {
             realColumnNo = NOT_EXIST;
+        }
+        else {
+            realColumnNo = CommonUtil.lengthExpandedTabs(source, realColumnNo,
+                    getContext().getIndentationTabWidth());
         }
         return realColumnNo;
     }

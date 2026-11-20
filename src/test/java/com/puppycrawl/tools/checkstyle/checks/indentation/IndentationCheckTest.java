@@ -4949,6 +4949,12 @@ public class IndentationCheckTest extends AbstractModuleTestSupport {
                 expected);
     }
 
+    @Test
+    public void testArrayInitWithTabs() throws Exception {
+        verifyWithInlineConfigParser(getPath("InputIndentationArrayInitWithTabs.java"),
+                CommonUtil.EMPTY_STRING_ARRAY);
+    }
+
     private static final class IndentAudit implements AuditListener {
 
         private final IndentComment[] comments;
