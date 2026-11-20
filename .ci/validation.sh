@@ -1013,9 +1013,9 @@ jdeprscan)
   ./mvnw -e --no-transfer-progress clean compile test-compile \
     dependency:build-classpath -Dmdep.outputFile=target/classpath.txt -Pno-validations
   mkdir -p .ci-temp
-  jdeprscan --class-path "$(cat target/classpath.txt)" --release 25 \
-        target/classes target/test-classes > .ci-temp/jdeprscan.log 2>&1 || true
-  if grep -qvE '(^Directory)|(^$)' .ci-temp/jdeprscan.log ; then
+  if ! jdeprscan --class-path "$(cat target/classpath.txt)" --release 25 \
+      target/classes target/test-classes > .ci-temp/jdeprscan.log 2>&1 \
+      || grep -qvE '^Directory |^Picked up JAVA_TOOL_OPTIONS: |^$' .ci-temp/jdeprscan.log; then
     cat .ci-temp/jdeprscan.log
     echo "jdeprscan reported deprecated API usage or errors."
     exit 1
